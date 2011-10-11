@@ -4,15 +4,12 @@ var _ = require('underscore'),
 
 module.exports = function assetManager(o) {
 	var defaults = {
+		debug_path: '_debug',
+		debug_parameter: 'debug'
 	};
 	var options = _.extend(defaults, o);
-	var bundles = {
-		main: [
-			'lib/jquery-1.6.4.min.js',
-			'lib/underscore/underscore.js',
-			'lib/backbone/backbone.js'
-		]
-	};
+
+	var bundles = options.bundles;
 
 	var getBundleContent = function(bundle) {
 		var content = '';
@@ -30,7 +27,8 @@ module.exports = function assetManager(o) {
 	return function assetManager(req, res, next) {
 		var matches = req.url.match(/^\/js\/(.*)/);
 		if (matches) {
-			var debug = matches[1].match(/^_debug\/(.*)/);
+			var re = new RegExp('^' + options.debug_path + '/(.*)');
+			var debug = matches[1].match(re);
 			if (debug) {
 				fs.readFile(debug[1], function(err, buffer) {
 					if (err) return next(err);
@@ -43,10 +41,10 @@ module.exports = function assetManager(o) {
 				if (req.headers && req.headers.referer) {
 					querystring = qs.parse(req.headers.referer.split('?')[1]);
 				}
-				if (querystring['debug'] !== undefined) {
+				if (querystring[options.debug_parameter] !== undefined) {
 					var output = 'var h=document.getElementsByTagName("head")[0];';
 					for (var i=0; i<bundles[bundle].length; i++) {
-						output += 'var s=document.createElement("script");s.type="text/javascript";s.src="/js/_debug/' + bundles[bundle][i] + '";h.appendChild(s);'
+						output += 'var s=document.createElement("script");s.type="text/javascript";s.src="/js/' + options.debug_path + '/' + bundles[bundle][i] + '";h.appendChild(s);'
 					}
 					res.header('Content-Type', 'text/javascript');
 					res.send(output);
